@@ -13,98 +13,99 @@ Copernicus Data Space Ecosystem.
 
 ## Application Architecture & Flow Diagram
 
-The following architecture diagram represents the end-to-end flow of the application across the user interface, 3D field visualization, crop diagnostics, application API, AI advisory assistant, and geospatial data pipeline:
+The diagram below shows the end-to-end flow between the farmer-facing interface, field and crop inspection tools, geospatial processing pipeline, application services, and speech/AI services.
 
 ```mermaid
 flowchart TD
-    %% Styling
-    classDef actor fill:#ede9fe,stroke:#8b5cf6,stroke-width:2px,color:#3b0764
-    classDef vis fill:#dbeafe,stroke:#3b82f6,stroke-width:2px,color:#1e3a8a
-    classDef diag fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,color:#78350f
-    classDef api fill:#dcfce7,stroke:#22c55e,stroke-width:2px,color:#14532d
-    classDef ai fill:#ffe4e6,stroke:#f43f5e,stroke-width:2px,color:#881337
-    classDef geo fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0369a1
+    classDef actor fill:#ede9fe,stroke:#8b5cf6,stroke-width:1.5px,color:#3b0764
+    classDef ui fill:#dbeafe,stroke:#3b82f6,stroke-width:1.5px,color:#1e3a8a
+    classDef geo fill:#dcfce7,stroke:#22c55e,stroke-width:1.5px,color:#14532d
+    classDef service fill:#fef3c7,stroke:#d97706,stroke-width:1.5px,color:#78350f
+    classDef access fill:#ffe4e6,stroke:#f43f5e,stroke-width:1.5px,color:#881337
+    classDef store fill:#fef3c7,stroke:#d97706,stroke-width:1.5px,color:#78350f
 
     Farmer(("Farmer / Agronomist")):::actor
 
-    subgraph Field_Vis["Field Visualization"]
-        Dashboard["Dashboard [App.tsx]"]:::vis
-        CellInspector["Cell Inspector [CellInspector.tsx]"]:::vis
-        LayerControls["Layer Controls [LayerToggle.tsx]"]:::vis
-        Canvas3D["3D Canvas [ThreeCanvas.tsx]"]:::vis
-        TerrainScene["Terrain Scene [TerrainScene.ts]"]:::vis
-        CropRenderer["Crop Renderer [CropRenderer.ts]"]:::vis
-        StressLayer["Stress Layer [StressHeatLayer.ts]"]:::vis
+    subgraph FieldCropUI["Field and Crop UI"]
+        AppRouter["App Router [App.tsx]"]:::ui
+        LandInspection["Land Inspection"]:::ui
+        CropInspection["Crop Inspection"]:::ui
+        Canvas3D["3D Field Canvas [ThreeCanvas.tsx]"]:::ui
+        CellInspector["Cell Inspector [CellInspector.tsx]"]:::ui
+        LayerControls["Layer Controls [LayerToggle.tsx]"]:::ui
+        FieldInfo["Field Information [InfoPanel.tsx]"]:::ui
+        StressAnalysis["Stress Analysis"]:::ui
+        VoiceRecorder["Voice Recorder [wavRecorder.ts]"]:::ui
+        TerrainScene["Terrain Scene [TerrainScene.ts]"]:::ui
+        CropRenderer["Crop Renderer [CropRenderer.ts]"]:::ui
+        StressLayer["Stress Layer [StressRiskLayer.ts]"]:::ui
+        GridOverlay["Grid Overlay [GridOverlay.ts]"]:::ui
     end
 
-    subgraph Crop_Diag["Crop Diagnostics"]
-        StressAnalysis["Stress Analysis"]:::diag
-        ImageMLService["Image ML Service [ml_service.py]"]:::diag
-        ModelInference["Model Inference [inference.py]"]:::diag
-        CropAnalysis["Crop Analysis"]:::diag
-        SoilReport["Soil Report"]:::diag
-        SoilParser["Soil Parser [soil_parser.py]"]:::diag
-        MLApiClient["ML API Client [mlApi.ts]"]:::diag
+    subgraph GeoPipeline["Geospatial Pipeline"]
+        ImageryDownload["Imagery Download"]:::geo
+        ElevationDownload["Elevation Download [05_download_dem.py]"]:::geo
+        NDVI["NDVI Calculation"]:::geo
+        TerrainDerivation["Terrain Derivation"]:::geo
+        GridConstruction["Grid Construction [07_create_grid.py]"]:::geo
+        StressEnrichment["Stress Enrichment"]:::geo
     end
 
-    subgraph App_API["Application API"]
-        FastAPIServer["FastAPI Server [server.py]"]:::api
-        MLRoutes["ML Routes [ml_routes.py]"]:::api
-        AssistantRoutes["Assistant Routes [assistant_routes.py]"]:::api
+    subgraph ConfigAccess["Configuration and Access"]
+        Settings["Pipeline Settings [settings.py]"]:::access
+        OAuth["Copernicus OAuth [auth.py]"]:::access
     end
 
-    subgraph AI_Adv["AI Advisory"]
-        AssistantPanel["Assistant Panel"]:::ai
-        ContextAnalysis["Context Analysis"]:::ai
-        GroqAssistant["Groq Assistant [groq_service.py]"]:::ai
-        AssistantApiClient["Assistant API Client [assistantApi.ts]"]:::ai
+    Sentinel[("Sentinel-2 Imagery")]:::store
+    DEM[("Copernicus DEM")]:::store
+
+    subgraph AppServices["Application Services"]
+        API["Application API [server.py]"]:::service
+        ProcessedGrid[("Processed Grid Data [server.py]")]:::store
+        DiagnosticEngine["Diagnostic Engine"]:::service
     end
 
-    subgraph Geo_Data["Geospatial Data"]
-        SatelliteGIS["Satellite GIS Pipeline"]:::geo
-        SentinelDEM[("Sentinel-2 / DEM")]:::geo
-        GridTerrainData["Grid / Terrain Data [server.py]"]:::geo
-    end
+    Sarvam["Sarvam Speech API"]:::geo
+    Groq["Groq API"]:::geo
 
-    Farmer -->|"uses"| Dashboard
+    Farmer -->|"uses"| AppRouter
+    AppRouter -->|"routes to"| LandInspection
+    AppRouter -->|"routes to"| CropInspection
 
-    Dashboard -->|"renders"| CellInspector
-    Dashboard -->|"renders"| LayerControls
-    Dashboard -->|"renders"| Canvas3D
+    LandInspection -->|"renders"| Canvas3D
+    LandInspection -->|"renders"| CellInspector
+    LandInspection -->|"renders"| LayerControls
+    LandInspection -->|"renders"| FieldInfo
+    LandInspection -->|"renders"| StressAnalysis
+    CropInspection -.->|"records audio"| VoiceRecorder
 
     Canvas3D -->|"creates"| TerrainScene
-    Canvas3D -->|"generates"| CropRenderer
-    Canvas3D -->|"applies"| StressLayer
+    Canvas3D -->|"uses"| CropRenderer
+    Canvas3D -->|"uses"| StressLayer
+    Canvas3D -->|"uses"| GridOverlay
 
-    Dashboard -->|"presents"| StressAnalysis
-    Dashboard -->|"presents"| CropAnalysis
-    Dashboard -->|"presents"| SoilReport
+    ImageryDownload -->|"downloads imagery"| Sentinel
+    ElevationDownload -->|"downloads elevation"| DEM
+    Settings -->|"uses settings"| ImageryDownload
+    Settings -->|"uses settings"| ElevationDownload
+    Settings -->|"provides credentials"| OAuth
+    OAuth -->|"authorizes access"| ImageryDownload
+    OAuth -->|"authorizes access"| ElevationDownload
 
-    CropAnalysis -->|"calls"| MLApiClient
-    SoilReport -->|"calls"| SoilParser
-    ImageMLService <-->|"loads / predicts"| ModelInference
+    ImageryDownload -->|"provides imagery"| NDVI
+    ElevationDownload -->|"provides elevation"| TerrainDerivation
+    NDVI -->|"defines grid template"| GridConstruction
+    TerrainDerivation -->|"provides terrain measures"| GridConstruction
+    GridConstruction -->|"enriches grid"| StressEnrichment
+    GridConstruction -->|"produces grid layers"| ProcessedGrid
+    StressEnrichment -->|"updates grid layers"| ProcessedGrid
 
-    MLApiClient -->|"parses report / analyses"| MLRoutes
-    MLRoutes -->|"analyses image"| ImageMLService
-    MLRoutes -->|"parses report / analysis"| SoilParser
-
-    FastAPIServer -->|"registers routes"| MLRoutes
-    FastAPIServer -->|"registers routes"| AssistantRoutes
-    Dashboard -->|"fetches grid / terrain"| FastAPIServer
-
-    MLRoutes -->|"stores analysis"| AssistantRoutes
-
-    AssistantPanel -->|"calls"| AssistantApiClient
-    AssistantApiClient -->|"sends chat"| AssistantRoutes
-    AssistantApiClient -->|"requests advice"| AssistantRoutes
-
-    AssistantRoutes -->|"builds context"| ContextAnalysis
-    AssistantRoutes -->|"requests advice"| GroqAssistant
-
-    FastAPIServer -->|"reads grid / serves data"| GridTerrainData
-
-    SatelliteGIS -->|"downloads imagery / elevation"| SentinelDEM
-    SatelliteGIS -->|"produces grid layers"| GridTerrainData
+    Canvas3D -->|"fetches grid and terrain"| API
+    API -->|"reads processed data"| ProcessedGrid
+    StressAnalysis -.->|"requests investigations"| API
+    API -->|"starts investigations"| DiagnosticEngine
+    DiagnosticEngine -.->|"requests language assistance"| Groq
+    API -->|"sends speech requests"| Sarvam
 ```
 
 ---
