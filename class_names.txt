@@ -1,0 +1,4 @@
+disease_stress
+healthy
+nutrients_stress
+water_stress

@@ -21,6 +21,17 @@ data/processed/
 *.tif
 *.png
 
+# Large ML model files
+*.h5
+*.keras
+crop_stress_model*
+
+# Datasets
+ml_model_datasets/
+
+# Cloned repos (not needed in remote)
+IndicConformerASR/
+
 # IDE & System
 .vscode/
 .idea/
