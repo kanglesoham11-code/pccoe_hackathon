@@ -11,6 +11,104 @@ Copernicus Data Space Ecosystem.
 
 ---
 
+## Application Architecture & Flow Diagram
+
+The following architecture diagram represents the end-to-end flow of the application across the user interface, 3D field visualization, crop diagnostics, application API, AI advisory assistant, and geospatial data pipeline:
+
+```mermaid
+flowchart TD
+    %% Styling
+    classDef actor fill:#ede9fe,stroke:#8b5cf6,stroke-width:2px,color:#3b0764
+    classDef vis fill:#dbeafe,stroke:#3b82f6,stroke-width:2px,color:#1e3a8a
+    classDef diag fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,color:#78350f
+    classDef api fill:#dcfce7,stroke:#22c55e,stroke-width:2px,color:#14532d
+    classDef ai fill:#ffe4e6,stroke:#f43f5e,stroke-width:2px,color:#881337
+    classDef geo fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0369a1
+
+    Farmer(("Farmer / Agronomist")):::actor
+
+    subgraph Field_Vis["Field Visualization"]
+        Dashboard["Dashboard [App.tsx]"]:::vis
+        CellInspector["Cell Inspector [CellInspector.tsx]"]:::vis
+        LayerControls["Layer Controls [LayerToggle.tsx]"]:::vis
+        Canvas3D["3D Canvas [ThreeCanvas.tsx]"]:::vis
+        TerrainScene["Terrain Scene [TerrainScene.ts]"]:::vis
+        CropRenderer["Crop Renderer [CropRenderer.ts]"]:::vis
+        StressLayer["Stress Layer [StressHeatLayer.ts]"]:::vis
+    end
+
+    subgraph Crop_Diag["Crop Diagnostics"]
+        StressAnalysis["Stress Analysis"]:::diag
+        ImageMLService["Image ML Service [ml_service.py]"]:::diag
+        ModelInference["Model Inference [inference.py]"]:::diag
+        CropAnalysis["Crop Analysis"]:::diag
+        SoilReport["Soil Report"]:::diag
+        SoilParser["Soil Parser [soil_parser.py]"]:::diag
+        MLApiClient["ML API Client [mlApi.ts]"]:::diag
+    end
+
+    subgraph App_API["Application API"]
+        FastAPIServer["FastAPI Server [server.py]"]:::api
+        MLRoutes["ML Routes [ml_routes.py]"]:::api
+        AssistantRoutes["Assistant Routes [assistant_routes.py]"]:::api
+    end
+
+    subgraph AI_Adv["AI Advisory"]
+        AssistantPanel["Assistant Panel"]:::ai
+        ContextAnalysis["Context Analysis"]:::ai
+        GroqAssistant["Groq Assistant [groq_service.py]"]:::ai
+        AssistantApiClient["Assistant API Client [assistantApi.ts]"]:::ai
+    end
+
+    subgraph Geo_Data["Geospatial Data"]
+        SatelliteGIS["Satellite GIS Pipeline"]:::geo
+        SentinelDEM[("Sentinel-2 / DEM")]:::geo
+        GridTerrainData["Grid / Terrain Data [server.py]"]:::geo
+    end
+
+    Farmer -->|"uses"| Dashboard
+
+    Dashboard -->|"renders"| CellInspector
+    Dashboard -->|"renders"| LayerControls
+    Dashboard -->|"renders"| Canvas3D
+
+    Canvas3D -->|"creates"| TerrainScene
+    Canvas3D -->|"generates"| CropRenderer
+    Canvas3D -->|"applies"| StressLayer
+
+    Dashboard -->|"presents"| StressAnalysis
+    Dashboard -->|"presents"| CropAnalysis
+    Dashboard -->|"presents"| SoilReport
+
+    CropAnalysis -->|"calls"| MLApiClient
+    SoilReport -->|"calls"| SoilParser
+    ImageMLService <-->|"loads / predicts"| ModelInference
+
+    MLApiClient -->|"parses report / analyses"| MLRoutes
+    MLRoutes -->|"analyses image"| ImageMLService
+    MLRoutes -->|"parses report / analysis"| SoilParser
+
+    FastAPIServer -->|"registers routes"| MLRoutes
+    FastAPIServer -->|"registers routes"| AssistantRoutes
+    Dashboard -->|"fetches grid / terrain"| FastAPIServer
+
+    MLRoutes -->|"stores analysis"| AssistantRoutes
+
+    AssistantPanel -->|"calls"| AssistantApiClient
+    AssistantApiClient -->|"sends chat"| AssistantRoutes
+    AssistantApiClient -->|"requests advice"| AssistantRoutes
+
+    AssistantRoutes -->|"builds context"| ContextAnalysis
+    AssistantRoutes -->|"requests advice"| GroqAssistant
+
+    FastAPIServer -->|"reads grid / serves data"| GridTerrainData
+
+    SatelliteGIS -->|"downloads imagery / elevation"| SentinelDEM
+    SatelliteGIS -->|"produces grid layers"| GridTerrainData
+```
+
+---
+
 ## Data Sources
 
 ### Sentinel-2 L2A (Multispectral Imagery)
